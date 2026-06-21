@@ -1,0 +1,6 @@
+Oficialus BD2 aprašymas (MKD reikalavimai): žr. failą
+
+    ../source.txt
+
+Ten: programos ir versijos, detalus paleidimas localhost, naudojimasis,
+build ir projektiniai struktūra, laboratorinio PC konfigūracija (Python ir kt.).

@@ -1,0 +1,129 @@
+================================================================================
+BD2 — „VIDINIS MEDIS“
+Oficialus produkto aprašymas (MKD laboratorijos pristatymui)
+================================================================================
+
+1. PRODUKTAS
+------------
+Pavadinimas: Vidinis medis.
+Tipas: interaktyvi naršyklės aplikacija (HTML5, JavaScript, p5.js, Canvas 2D).
+Paskirtis: emocinių zonų medžio tyrinėjimas, įėjimas į zonų gylį, būsenos
+keitimas (pvz. „nyksta / lieka“).
+
+2. REIKALINGA PROGRAMINĖ ĮRANGA IR VERSIJOS
+------------------------------------------
+2.1. Naršyklė (būtina)
+  • Google Chrome 100 ar naujesnė, arba
+  • Microsoft Edge 100 ar naujesnė, arba
+  • Mozilla Firefox 100 ar naujesnė, arba
+  • Safari 15 ar naujesnė (macOS / iOS).
+  Būtina įjungta JavaScript ir Canvas palaikymas (įprasta naršyklėse).
+
+2.2. Vietinis HTTP serveris
+  • Python 3.8 ar naujesnė — standartinė biblioteka „http.server“
+    (komanda: python -m http.server arba py -m http.server).
+  ARBA bet kuris kitas statinių failų serveris (pvz. VS Code „Live Server“,
+  „npx serve“), jei laboratorijoje leidžiama.
+
+  Pastaba: produktas nėra skirtas atidarymui tiesiogiai per file:// (dvigubas
+  paspaudimas ant index.html) — toks būdas nelaikomas „localhost“ ir gali
+  neteisingai veikti su Canvas.
+
+2.3. Kompiliatoriai / Node.js
+  • Nereikalingi produkto paleidimui ir naudojimui. Visas kodas vykdomas
+    naršyklėje.
+
+2.4. Interneto ryšys
+  • Pristatymo versijoje nereikalingas: p5.js ir šriftai (Inter, Playfair
+    Display) įtraukti lokaliai (žr. 4 skyrių).
+
+3. BD2 KATALOGO STRUKTŪRA (ATITINKA MKD REIKALAVIMĄ)
+----------------------------------------------------
+BD2/
+  source.txt      — šis failas: programos, versijos, paleidimas, naudojimasis (MKD).
+  build/          — veikiantis produktas (paleidžiama versija laboratorijoje).
+  projektiniai/   — visi failai, reikalingi produkto kūrimui ir redagavimui.
+
+4. VEIKIANTIS PRODUKTAS — APLANKAS „build/“
+--------------------------------------------
+Kataloge build/ yra:
+  • index.html — įėjimo taškas;
+  • lib/p5.min.js — p5.js v1.9.3 (lokaliai);
+  • fonts/offline/ — Inter ir Playfair Display (.woff2) bei fonts-offline.css;
+  • visi projekto .js moduliai (tree-*.js, sketch-core.js ir kt.);
+  • favicon.svg, og-image.svg, media/ ir kiti statiniai resursai.
+
+Šis aplankas ir turi būti pristatytas kaip „subuildintas produktas“ ir paleistas
+laboratorijoje (žr. 5 skyrių).
+
+5. DETALUS PRODUKTŲ PALEIDIMAS 
+---------------------------------------------------------------
+5.1. Paruošimas
+  (1) Nukopijuokite arba išarchyvuokite BD2 katalogą į laboratorijos kompiuterį
+      (pvz. darbalaukį arba C:\Studentai\BD2\).
+  (2) Atidarykite terminalą (Command Prompt, PowerShell arba Terminal macOS/Linux).
+
+5.2. Paleidimas su Python (rekomenduojama)
+  (1) Eikite į build aplanką:
+        Windows:  cd kelias\į\BD2\build
+        pvz.:      cd C:\Users\Vartotojas\Desktop\BD2\build
+  (2) Paleiskite serverį:
+        python -m http.server 8080
+      Jei komanda „python“ neveikia, bandykite:
+        py -m http.server 8080
+  (3) Naršyklėje atverkite adresą:
+        http://127.0.0.1:8080/
+      arba
+        http://localhost:8080/
+
+  (4) Uždarymui: terminale paspauskite Ctrl+C.
+
+5.3. Jei Python nėra įdiegtas (papildoma laboratorinio PC konfigūracija)
+  • Windows: įdiekite „Python 3.12“ iš https://www.python.org/downloads/
+    diegimo metu pažymėkite „Add python.exe to PATH“.
+  • Arba naudokite kitą leistiną statinių failų serverį, kurį leidžia
+    laboratorijos taisyklės (žr. 2.2).
+
+5.4. Portas užimtas
+  Jei 8080 užimtas, pasirinkite kitą, pvz.:
+        python -m http.server 8090
+  ir naršyklėje atverkite http://127.0.0.1:8090/
+
+6. NAUDOJIMOSI INSTRUKCIJA
+--------------------------
+  (1) Atidarius puslapį, palaukite įkrovos; pasirodys įvadinė ekrano dalis.
+  (2) Paspaudžiate / paliečiate nurodytą sritį (pvz. „Atrask“), kad pereitumėte
+      prie medžio scenos.
+  (3) Medyje: pasirinkite kamieną arba šaką (emocinę zoną). Kai kurios zonos
+      atrakinamos progresu.
+  (4) Įėjus į zonos gylį: skaitykite ekrane rodomą tekstą; grįžimui naudokite
+      nurodytą valdiklį (pvz. „Grįžti“), jei rodomas.
+  (5) „Nyksta / lieka“: perjungiklis keičia, kaip greitai slopsta emociniai
+      pėdsakai (greičiau / lėčiau lieka atmintis vizualiai).
+
+7. PROJEKTINIAI FAILAI — APLANKAS „projektiniai/“
+-------------------------------------------------
+Čia yra tie patys funkciniai failai kaip build/, skirti kūrimui ir taisymams.
+Po pakeitimų prieš pristatymą rekomenduojama atnaujinti build/ (perkopijuoti
+pakeistus .js, index.html, lib/, fonts/offline/), kad laboratorijoje būtų
+rodoma naujausia versija.
+
+Papildomai projektiniai/ gali turėti .vscode/ (redaktoriaus nustatymai) —
+šie failai neprivalomi produkto paleidimui ir paprastai nekopijuojami į build/.
+
+8. ŠRIFTŲ LICENCIJOS
+--------------------
+Naudojami Inter ir Playfair Display šriftai (Google Fonts platinimas pagal
+SIL Open Font License). Projektas naudoja tik .woff2 failus kataloge
+fonts/offline/.
+
+9. TECHNINĖS PASTABOS
+---------------------
+  • Optimali patirtis — viso ekrano naršyklės langas.
+  • Drobės matmuo prisitaiko prie lango dydžio ir orientacijos (visualViewport,
+    safe-area — žr. index.html ir tree-interaction.js).
+  • Jei sistema praneša „Reduce motion“, dalis animacijų sumažinama.
+
+================================================================================
+Dokumentas skirtas MKD laboratorijos vertinimui. Paskutinis atnaujinimas: 2026-05.
+================================================================================

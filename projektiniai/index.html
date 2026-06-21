@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="lt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#070605" />
+    <!-- Inter + Playfair — lokaliai (fonts/offline), veikia be interneto. -->
+    <link rel="stylesheet" href="./fonts/offline/fonts-offline.css?v=bd2-offline-1" />
+    <title>Vidinis medis</title>
+    <meta name="application-name" content="Vidinis medis" />
+    <meta name="apple-mobile-web-app-title" content="Vidinis medis" />
+    <meta
+      name="description"
+      content="Interaktyvus medis — emocijos, zonos, gylis. Paliesk kamieną ir šakas."
+    />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <!-- Dalijimuisi socialiniuose tinkluose geriau nurodyti pilną https://…/og-image.svg URL. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Vidinis medis" />
+    <meta
+      property="og:description"
+      content="Interaktyvus medis — emocijos, zonos, gylis. Paliesk kamieną ir šakas."
+    />
+    <meta property="og:image" content="./og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vidinis medis — interaktyvus medis" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vidinis medis" />
+    <meta
+      name="twitter:description"
+      content="Interaktyvus medis — emocijos, zonos, gylis. Paliesk kamieną ir šakas."
+    />
+    <meta name="twitter:image" content="./og-image.svg" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #070605;
+        overflow: hidden;
+        height: 100%;
+        height: 100dvh;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+      }
+
+      body {
+        position: relative;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        user-select: none;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        left: env(safe-area-inset-left, 0px);
+        right: env(safe-area-inset-right, 0px);
+        top: env(safe-area-inset-top, 0px);
+        bottom: env(safe-area-inset-bottom, 0px);
+        background: #070605;
+        z-index: 2;
+        pointer-events: none;
+        opacity: 1;
+        transition: opacity 4.8s ease-out;
+      }
+
+      canvas {
+        display: block;
+        vertical-align: top;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        filter: brightness(0.18) saturate(0.72) blur(1.6px);
+        transform: scale(1.018) translateZ(0);
+        -webkit-transform: scale(1.018) translateZ(0);
+        transition: filter 4.8s ease-out, transform 4.8s ease-out;
+        /* Safari: stabiliau komponuoja su filtru + drobe. */
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+      }
+
+      /* Drobė = „saugus“ stačiakampis (ne notch); dydį skaičiuoja getLayoutCanvas* (plotis/aukštis be inset). */
+      body:not(.as-deep-sulauzyk) canvas {
+        position: fixed;
+        left: env(safe-area-inset-left, 0px);
+        top: env(safe-area-inset-top, 0px);
+        margin: 0;
+        z-index: 1;
+      }
+
+      /**
+       * Šviesos hierarchija: platesnis skaidrus židinys (medis), tamsesni kampai (ilsisi akis).
+       * Centras žemiau – sutampa su kamieno zona; grain sluoksnis ant viršaus.
+       */
+      .cinematic-frame {
+        position: fixed;
+        left: env(safe-area-inset-left, 0px);
+        right: env(safe-area-inset-right, 0px);
+        top: env(safe-area-inset-top, 0px);
+        bottom: env(safe-area-inset-bottom, 0px);
+        z-index: 3;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse 74% 56% at 50% 44%,
+          transparent 0%,
+          transparent 52%,
+          rgba(4, 3, 2, 0.46) 100%
+        );
+      }
+
+      /* „Analoginis“ grain: soft-light + storesnis tile – mažiau „HDR kino“ nei overlay. */
+      .cinematic-frame-grain {
+        position: absolute;
+        inset: 0;
+        opacity: 0.045;
+        background-image: url("./media/film-grain.svg");
+        background-size: 280px 280px;
+        background-repeat: repeat;
+        mix-blend-mode: soft-light;
+        pointer-events: none;
+      }
+
+      @supports not (mix-blend-mode: soft-light) {
+        .cinematic-frame-grain {
+          mix-blend-mode: overlay;
+          opacity: 0.045;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cinematic-frame-grain {
+          opacity: 0.032;
+        }
+
+        .cinematic-frame {
+          left: env(safe-area-inset-left, 0px);
+          right: env(safe-area-inset-right, 0px);
+          top: env(safe-area-inset-top, 0px);
+          bottom: env(safe-area-inset-bottom, 0px);
+          background: radial-gradient(
+            ellipse 74% 56% at 50% 44%,
+            transparent 0%,
+            transparent 54%,
+            rgba(4, 3, 2, 0.32) 100%
+          );
+        }
+      }
+
+      body.is-loaded::before {
+        opacity: 0;
+      }
+
+      body.is-loaded canvas {
+        filter: brightness(1) saturate(1) blur(0);
+        transform: scale(1);
+      }
+
+      /* Įkrova: sutrumpintas fade + silpnesnis blur (ne „nebaigtas“ puslapis; prieinamumas). */
+      @media (prefers-reduced-motion: reduce) {
+        body::before {
+          transition: opacity 0.9s ease-out;
+        }
+
+        canvas {
+          filter: brightness(0.48) saturate(0.86) blur(0.55px);
+          transform: scale(1.006);
+          transition: filter 0.9s ease-out, transform 0.9s ease-out;
+        }
+      }
+
+      :root {
+        /* Tarpas nuo apačios – JS nustato pagal viewport (didesnė reikšmė = arčiau medžio). */
+        /* Mažesnė reikšmė = žemiau — mažiau uždengia išsišokęs medis */
+        --emotion-persist-bottom: 86px;
+        /* JS skaito per getComputedStyle (tree-interaction) drobės dydžiui */
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-right: env(safe-area-inset-right, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-left: env(safe-area-inset-left, 0px);
+      }
+
+      /* „nyksta / lieka“: z-index žemiau .cinematic-frame (3) — tas pats šviesos / grain sluoksnis ant viršaus,
+         todėl tekstas jaučiasi toje pačioje plėvelėje kaip drobė, ne atskiras HUD. */
+      /* Dvi būsenos: kairėn / dešinėn — Inter kaip medžio išorės UI. */
+      /* Gylis / įėjimas į gylį: „nyksta / lieka“ išnyksta kartu su medžiu (ne „limpa“ ant viršaus). */
+      body.deep-mode #emotion-persistence {
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transition: opacity 0.38s ease-out;
+      }
+
+      /* Aš: pilnas įkrova – „sulaužyti“; joks išorinis (HTML) medis / emocijos sluoksnis virš drobės */
+      body.as-deep-sulauzyk #emotion-persistence {
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+
+      body.as-deep-sulauzyk canvas {
+        position: relative;
+        left: auto;
+        top: auto;
+        margin: 0 auto;
+        z-index: 40;
+      }
+
+      @keyframes emotion-persist-bloom {
+        from {
+          opacity: 0;
+          transform: translateX(-50%) translateY(-14px) scale(0.99);
+          filter: saturate(0.9) blur(0.45px);
+        }
+        to {
+          opacity: 0.64;
+          transform: translateX(-50%) translateY(-18px) scale(1);
+          filter: saturate(0.9) blur(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        @keyframes emotion-persist-bloom {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-18px) scale(1);
+            filter: saturate(0.9);
+          }
+          to {
+            opacity: 0.64;
+            transform: translateX(-50%) translateY(-18px) scale(1);
+            filter: saturate(0.9);
+          }
+        }
+      }
+
+      #emotion-persistence {
+        position: fixed;
+        /* Virš drobės (1), po kino rėmeliu (3) — vignette + grain kaip ant medžio */
+        z-index: 2;
+        left: 50%;
+        right: auto;
+        bottom: calc(var(--emotion-persist-bottom) + env(safe-area-inset-bottom, 0px));
+        transform: translateX(-50%) translateY(-18px);
+        display: block;
+        width: min(
+          340px,
+          calc(100vw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
+        );
+        max-width: 340px;
+        background: none;
+        border: none;
+        box-shadow: none;
+        padding: 0 clamp(4px, 2.5vw, 14px);
+        margin: 0;
+        pointer-events: none;
+        user-select: none;
+        -webkit-user-select: none;
+        opacity: 0;
+        visibility: visible;
+        transition: opacity 0.42s ease-out, filter 0.45s ease-out;
+        /* Tas pats „filmas“ kaip drobėje — ne ryškus atskiras sluoksnis */
+        filter: saturate(0.9);
+      }
+
+      /* Mobilus: 100dvw dažnai sutampa su matomu plotu (ne „100vw + paslėpta juosta“) */
+      @supports (height: 100dvh) {
+        #emotion-persistence {
+          width: min(
+            340px,
+            calc(100dvw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
+          );
+        }
+      }
+
+      @media (max-width: 540px) {
+        #emotion-persistence {
+          padding: 0 clamp(6px, 4vw, 18px);
+        }
+      }
+
+      /* Tik po pirmo kamieno paspaudimo (trunk-touched) — tada atsiranda nustatymas. */
+      body.is-loaded.has-emotion-slider.trunk-touched:not(.emotion-thought-idle) #emotion-persistence {
+        /* opacity / transform — keyframes `emotion-persist-bloom` (forwards) */
+        animation: emotion-persist-bloom 0.52s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        /* auto: kitaip iOS dažnai neperduoda lietimo į „nyksta / lieka“ (tėvas buvo none). */
+        pointer-events: auto;
+      }
+
+      body.is-loaded.has-emotion-slider.trunk-touched.emotion-thought-idle #emotion-persistence {
+        opacity: 0;
+        pointer-events: none;
+        animation: none;
+        transition: opacity 0.85s ease-out;
+      }
+
+      body.is-loaded.has-emotion-slider.trunk-touched:not(.emotion-thought-idle) #emotion-persistence .emotion-thought-toggle {
+        pointer-events: auto;
+        cursor: default;
+      }
+
+      #emotion-persistence .emotion-thought-toggle {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: 44px;
+        box-sizing: border-box;
+        gap: 0.5em;
+        cursor: pointer;
+        touch-action: manipulation;
+        background: none;
+        border: none;
+        padding: 6px clamp(5px, 2.2vw, 28px);
+        margin: 0;
+        font-family: "Inter", system-ui, sans-serif;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.38;
+        letter-spacing: 0.065em;
+        text-transform: none;
+        color: rgba(196, 188, 174, 0.52);
+        outline: none;
+        box-shadow: none;
+        -webkit-tap-highlight-color: transparent;
+        transition: color 0.45s ease, filter 0.35s ease, opacity 0.4s ease;
+        filter: none;
+      }
+
+      #emotion-persistence .emotion-thought-toggle:focus-visible {
+        outline: none;
+      }
+
+      #emotion-persistence .emotion-word {
+        display: block;
+        flex: 0 0 auto;
+        min-width: 0;
+        font-family: "Playfair Display", Georgia, serif;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        transition: color 0.45s ease, opacity 0.45s ease, text-shadow 0.4s ease, transform 0.35s ease;
+        text-shadow: 0 0 22px rgba(255, 248, 238, 0.06);
+      }
+
+      #emotion-persistence .emotion-word-n {
+        text-align: left;
+        flex: 0 0 auto;
+        padding-right: 0.15em;
+      }
+
+      #emotion-persistence .emotion-word-l {
+        text-align: right;
+        flex: 0 0 auto;
+        padding-left: 0.15em;
+      }
+
+      @media (max-width: 520px) {
+        #emotion-persistence .emotion-thought-toggle {
+          font-size: 15px;
+          letter-spacing: 0.05em;
+          color: rgba(200, 192, 178, 0.58);
+        }
+      }
+
+      @media (max-width: 420px) {
+        #emotion-persistence .emotion-thought-toggle {
+          font-size: 14px;
+          letter-spacing: 0.045em;
+        }
+      }
+
+      @media (pointer: coarse) {
+        #emotion-persistence .emotion-thought-toggle {
+          min-height: 48px;
+        }
+      }
+
+      /* „Nyksta / lieka“ — Playfair, mažiau kontrasto, lengvas „rūkas“ */
+      #emotion-persistence.emotion-mode-nyksta .emotion-word-n {
+        color: rgba(210, 202, 188, 0.68);
+        opacity: 0.78;
+        text-shadow: 0 0 18px rgba(255, 248, 238, 0.05), 0 1px 2px rgba(6, 4, 2, 0.22);
+      }
+
+      #emotion-persistence.emotion-mode-nyksta .emotion-word-l {
+        color: rgba(118, 114, 108, 0.32);
+        opacity: 0.34;
+        text-shadow: none;
+      }
+
+      #emotion-persistence.emotion-mode-lieka .emotion-word-l {
+        color: rgba(210, 202, 188, 0.68);
+        opacity: 0.78;
+        text-shadow: 0 0 18px rgba(255, 248, 238, 0.05), 0 1px 2px rgba(6, 4, 2, 0.22);
+      }
+
+      #emotion-persistence.emotion-mode-lieka .emotion-word-n {
+        color: rgba(118, 114, 108, 0.32);
+        opacity: 0.34;
+        text-shadow: none;
+      }
+
+      body.is-loaded.has-emotion-slider.trunk-touched:not(.emotion-thought-idle) #emotion-persistence .emotion-thought-toggle:hover {
+        filter: drop-shadow(0 0 10px rgba(186, 170, 142, 0.06));
+      }
+
+      body.is-loaded.has-emotion-slider.trunk-touched:not(.emotion-thought-idle) #emotion-persistence .emotion-thought-toggle:hover .emotion-word-n,
+      body.is-loaded.has-emotion-slider.trunk-touched:not(.emotion-thought-idle) #emotion-persistence .emotion-thought-toggle:hover .emotion-word-l {
+        color: rgba(214, 206, 192, 0.68);
+        opacity: 0.82;
+      }
+
+      #emotion-persistence .emotion-thought-toggle:active .emotion-word-n,
+      #emotion-persistence .emotion-thought-toggle:active .emotion-word-l,
+      #emotion-persistence.emotion-press .emotion-thought-toggle .emotion-word-n,
+      #emotion-persistence.emotion-press .emotion-thought-toggle .emotion-word-l {
+        filter: brightness(1.12);
+        opacity: 0.98;
+      }
+
+      #emotion-persistence .emotion-thought-hint {
+        display: block;
+        margin-top: 3px;
+        text-align: center;
+        font-family: "Inter", system-ui, sans-serif;
+        font-size: 11px;
+        line-height: 1.4;
+        letter-spacing: 0.03em;
+        color: rgba(188, 182, 172, 0.55);
+        opacity: 0;
+        transform: translateY(4px);
+        transition: opacity 0.16s ease, transform 0.18s ease;
+        pointer-events: none;
+        text-shadow: 0 0 10px rgba(176, 152, 120, 0.13);
+      }
+
+      #emotion-persistence .emotion-thought-hint.is-visible {
+        opacity: 0.3;
+        transform: translateY(0);
+      }
+
+      #emotion-persistence .emotion-thought-hint.hint-nyksta {
+        color: rgba(198, 192, 184, 0.8);
+      }
+
+      #emotion-persistence .emotion-thought-hint.hint-lieka {
+        color: rgba(216, 208, 194, 0.86);
+      }
+
+      /* Paroda / instaliacija: ?kiosk=1 arba localStorage „basic-medis-kiosk“ = 1 */
+      html.medis-kiosk canvas {
+        outline: 1px solid rgba(186, 170, 142, 0.3);
+        outline-offset: -1px;
+      }
+
+      #medis-kiosk-fullscreen {
+        display: none;
+        position: fixed;
+        z-index: 50;
+        right: calc(10px + env(safe-area-inset-right, 0px));
+        bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+        padding: 8px 11px;
+        margin: 0;
+        border: 1px solid rgba(186, 170, 142, 0.35);
+        border-radius: 8px;
+        background: rgba(12, 10, 9, 0.72);
+        color: rgba(210, 200, 180, 0.92);
+        font-family: "Inter", system-ui, sans-serif;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html.medis-kiosk #medis-kiosk-fullscreen {
+        display: block;
+      }
+
+      #medis-kiosk-fullscreen:focus-visible {
+        outline: 2px solid rgba(186, 170, 142, 0.55);
+        outline-offset: 2px;
+      }
+    </style>
+    <script>
+      (function () {
+        try {
+          var q = new URLSearchParams(location.search).get("kiosk");
+          if (q === "1" || q === "true" || localStorage.getItem("basic-medis-kiosk") === "1") {
+            document.documentElement.classList.add("medis-kiosk");
+            document.addEventListener(
+              "contextmenu",
+              function (e) {
+                e.preventDefault();
+              },
+              true
+            );
+            function bindKioskFullscreen() {
+              var btn = document.getElementById("medis-kiosk-fullscreen");
+              if (!btn) return;
+              btn.addEventListener("click", function () {
+                var el = document.documentElement;
+                var req =
+                  el.requestFullscreen ||
+                  el.webkitRequestFullscreen ||
+                  el.msRequestFullscreen;
+                if (req) {
+                  try {
+                    req.call(el);
+                  } catch (err) {}
+                }
+              });
+            }
+            if (document.readyState === "loading") {
+              document.addEventListener("DOMContentLoaded", bindKioskFullscreen);
+            } else {
+              bindKioskFullscreen();
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <button type="button" id="medis-kiosk-fullscreen" aria-label="Pilnas ekranas">
+      Pilnas ekranas
+    </button>
+    <div class="cinematic-frame" aria-hidden="true">
+      <div class="cinematic-frame-grain"></div>
+    </div>
+    <div id="emotion-persistence" class="emotion-mode-lieka">
+      <div
+        class="emotion-thought-toggle"
+        id="emotion-thought-toggle"
+        role="group"
+        tabindex="0"
+        title="nyksta · lieka"
+        aria-label="Emocinė būsena: lieka"
+      >
+        <span class="emotion-word emotion-word-n">nyksta</span>
+        <span class="emotion-word emotion-word-l">lieka</span>
+      </div>
+      <div id="emotion-thought-hint" class="emotion-thought-hint" aria-live="polite"></div>
+    </div>
+    <script src="./lib/p5.min.js?v=bd2-offline-1"></script>
+    <!-- ?v= keiskite po pakeitimų — telefonas dažnai laiko seną JS cache. -->
+    <script src="./tree-config.js?v=bd2-9"></script>
+    <script src="./as-deep-fonts.js?v=bd2-8"></script>
+    <script src="./tree-geometry.js?v=bd2-8"></script>
+    <script src="./tree-interaction.js?v=bd2-9"></script>
+    <script src="./tree-deep-as-zone.js?v=bd2-10"></script>
+    <script src="./tree-deep-typography.js?v=bd2-8"></script>
+    <script src="./tree-deep.js?v=bd2-22"></script>
+    <script src="./tree-effects-ui-hints.js?v=bd2-11"></script>
+    <script src="./tree-effects-ui.js?v=bd2-19"></script>
+    <script src="./sketch-core.js?v=bd2-18"></script>
+    <script>
+      (function initEmotionThoughtToggle() {
+        const STORAGE_KEY = "basic-medis-emotion-persistence";
+        const toggle = document.getElementById("emotion-thought-toggle");
+        const root = document.getElementById("emotion-persistence");
+        const hint = document.getElementById("emotion-thought-hint");
+        if (!toggle || !root) {
+          return;
+        }
+
+        /** 0 = nyksta (greitesnis ghost decay), 1 = lieka (lėtesnis) — kaip sketch-core lerp */
+        let p = 1;
+        let hintHideTimer = null;
+
+        try {
+          const s = localStorage.getItem(STORAGE_KEY);
+          if (s !== null) {
+            if (s === "nyksta" || s === "lieka") {
+              p = s === "lieka" ? 1 : 0;
+            } else {
+              const v = parseFloat(s);
+              if (!Number.isNaN(v)) {
+                p = v < 0.5 ? 0 : 1;
+              }
+            }
+          }
+        } catch (e) {}
+
+        function pingSketch() {
+          if (typeof loop === "function") {
+            loop();
+          }
+          if (typeof redraw === "function") {
+            redraw();
+          }
+        }
+
+        function applyMode() {
+          root.classList.toggle("emotion-mode-nyksta", p === 0);
+          root.classList.toggle("emotion-mode-lieka", p === 1);
+          window.__emotionPersistence = p;
+          toggle.setAttribute(
+            "aria-label",
+            p === 0
+              ? "Emocinė būsena: nyksta (aktyvu)"
+              : "Emocinė būsena: lieka (aktyvu)"
+          );
+          try {
+            localStorage.setItem(STORAGE_KEY, p === 1 ? "lieka" : "nyksta");
+          } catch (e) {}
+          pingSketch();
+        }
+
+        function showThoughtHint(mode, text) {
+          // Show in the same global caption spot as "Grįžti į vidų?.."
+          if (typeof currentCaptionText !== "undefined") {
+            try {
+              currentCaptionTitle = "";
+              currentCaptionText = text;
+              currentCaptionZone = -1;
+              currentCaptionUntilMs = (typeof millis === "function" ? millis() : Date.now()) + 1500;
+              if (typeof currentCaptionEpilogue !== "undefined") {
+                currentCaptionEpilogue = "";
+              }
+              if (typeof _captionFadeStartMs !== "undefined" && typeof millis === "function") {
+                _captionFadeStartMs = millis();
+              }
+              pingSketch();
+            } catch (e) {}
+          }
+          // Keep local toggle hint hidden to avoid duplicate hints.
+          if (hint) {
+            hint.classList.remove("is-visible", "hint-nyksta", "hint-lieka");
+            hint.textContent = "";
+          }
+        }
+
+        function showThoughtModeHint(mode) {
+          showThoughtHint(
+            mode,
+            mode === 0 ? "Nyksta greičiau.." : "Lieka ilgiau.."
+          );
+        }
+
+        function setFromClick(clientX) {
+          const r = toggle.getBoundingClientRect();
+          const centerX = r.left + r.width * 0.5;
+          p = clientX < centerX ? 0 : 1;
+          applyMode();
+          showThoughtModeHint(p);
+        }
+
+        function updateEmotionPersistOffsets() {
+          let h = window.innerHeight || 600;
+          if (window.visualViewport && window.visualViewport.height > 0) {
+            h = window.visualViewport.height;
+          }
+          const narrow = window.innerWidth > 0 && window.innerWidth < 540;
+          const coarse =
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(pointer: coarse)").matches;
+          const compact = h < 380;
+          /* Mobilus pirštas + saugi zona virš home indikatoriaus (env prideda CSS apačioje) */
+          const bottomMin = narrow ? (coarse ? 82 : 76) : compact ? 76 : 88;
+          const ratio = narrow ? (compact ? 0.12 : 0.132) : 0.148;
+          const bottom = Math.max(
+            bottomMin,
+            Math.min(168, Math.round(h * ratio))
+          );
+          document.documentElement.style.setProperty(
+            "--emotion-persist-bottom",
+            bottom + "px"
+          );
+        }
+        updateEmotionPersistOffsets();
+        window.addEventListener("resize", updateEmotionPersistOffsets);
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", updateEmotionPersistOffsets);
+        }
+
+        document.addEventListener("medis-trunk-first-touched", function () {
+          bumpThoughtActivity();
+        });
+
+        const ZONE_FROM_BOTTOM = 0.2;
+        /** Lietime / siaurame ekrane nebeslėpti „nyksta / lieka“ — kitaip atrodo, kad teksto nėra. */
+        const canAutoHideEmotionBar =
+          typeof window.matchMedia === "function" &&
+          !window.matchMedia("(pointer: coarse)").matches &&
+          window.innerWidth >= 540;
+        const THOUGHT_IDLE_MS = 2400;
+        let zoneHideTimer = null;
+        let thoughtIdleTimer = null;
+
+        function bumpThoughtActivity() {
+          if (!document.body) {
+            return;
+          }
+          if (!document.body.classList.contains("has-emotion-slider")) {
+            return;
+          }
+          document.body.classList.remove("emotion-thought-idle");
+          if (thoughtIdleTimer) {
+            clearTimeout(thoughtIdleTimer);
+            thoughtIdleTimer = null;
+          }
+          if (!canAutoHideEmotionBar) {
+            return;
+          }
+          thoughtIdleTimer = setTimeout(function () {
+            document.body.classList.add("emotion-thought-idle");
+            thoughtIdleTimer = null;
+          }, THOUGHT_IDLE_MS);
+        }
+
+        let suppressEmotionClick = false;
+
+        function bindEmotionToggleFromClient(clientX, clientY) {
+          setFromClick(clientX);
+          if (typeof clientY === "number") {
+            updateZoneFromEvent(clientY);
+          }
+          bumpThoughtActivity();
+        }
+
+        toggle.addEventListener("click", function (e) {
+          if (suppressEmotionClick) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          bindEmotionToggleFromClient(e.clientX, e.clientY);
+        });
+
+        /* Kai kuriuose telefonuose „click“ vėluoja ar neateina — lietimas tiesiai čia. */
+        toggle.addEventListener(
+          "touchend",
+          function (e) {
+            var coarse =
+              typeof window.matchMedia === "function" &&
+              window.matchMedia("(pointer: coarse)").matches;
+            var narrow = window.innerWidth > 0 && window.innerWidth < 540;
+            if (!coarse && !narrow) {
+              return;
+            }
+            if (!e.changedTouches || !e.changedTouches[0]) {
+              return;
+            }
+            e.stopPropagation();
+            suppressEmotionClick = true;
+            window.setTimeout(function () {
+              suppressEmotionClick = false;
+            }, 450);
+            var t = e.changedTouches[0];
+            bindEmotionToggleFromClient(t.clientX, t.clientY);
+          },
+          { passive: true }
+        );
+
+        ["mousedown", "touchstart"].forEach(function (ev) {
+          toggle.addEventListener(
+            ev,
+            function () {
+              root.classList.add("emotion-press");
+            },
+            { passive: true }
+          );
+        });
+        ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach(function (ev) {
+          toggle.addEventListener(
+            ev,
+            function () {
+              root.classList.remove("emotion-press");
+            },
+            { passive: true }
+          );
+        });
+
+        toggle.addEventListener("keydown", function (e) {
+          if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+            e.preventDefault();
+            p = 0;
+            applyMode();
+            showThoughtModeHint(p);
+            bumpThoughtActivity();
+          } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+            e.preventDefault();
+            p = 1;
+            applyMode();
+            showThoughtModeHint(p);
+            bumpThoughtActivity();
+          } else if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            p = p === 0 ? 1 : 0;
+            applyMode();
+            showThoughtModeHint(p);
+            bumpThoughtActivity();
+          }
+        });
+
+        function setBottomZone(active) {
+          if (!document.body) {
+            return;
+          }
+          if (active) {
+            document.body.classList.add("emotion-slider-in-zone");
+            bumpThoughtActivity();
+            if (zoneHideTimer) {
+              clearTimeout(zoneHideTimer);
+              zoneHideTimer = null;
+            }
+          } else {
+            if (zoneHideTimer) {
+              clearTimeout(zoneHideTimer);
+            }
+            zoneHideTimer = setTimeout(function () {
+              document.body.classList.remove("emotion-slider-in-zone");
+              zoneHideTimer = null;
+            }, 500);
+          }
+        }
+        function updateZoneFromEvent(clientY) {
+          const h = window.innerHeight || 1;
+          setBottomZone(clientY >= h * (1 - ZONE_FROM_BOTTOM));
+        }
+        document.addEventListener("mousemove", function (e) {
+          bumpThoughtActivity();
+          updateZoneFromEvent(e.clientY);
+        });
+        document.addEventListener(
+          "touchstart",
+          function (e) {
+            if (e.touches && e.touches[0]) {
+              bumpThoughtActivity();
+              updateZoneFromEvent(e.touches[0].clientY);
+            }
+          },
+          { passive: true }
+        );
+        document.addEventListener(
+          "touchmove",
+          function (e) {
+            if (e.touches && e.touches[0]) {
+              bumpThoughtActivity();
+              updateZoneFromEvent(e.touches[0].clientY);
+            }
+          },
+          { passive: true }
+        );
+
+        toggle.addEventListener("focus", function () {
+          bumpThoughtActivity();
+          setBottomZone(true);
+        });
+        toggle.addEventListener("blur", function () {
+          setBottomZone(false);
+        });
+
+        applyMode();
+      })();
+    </script>
+    <script>
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            document.body.classList.add("is-loaded");
+          });
+        }, 250);
+      });
+    </script>
+  </body>
+</html>

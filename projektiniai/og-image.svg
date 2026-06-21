@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="ogv" cx="50%" cy="42%" r="78%">
+      <stop offset="0%" stop-color="#1a1714" />
+      <stop offset="48%" stop-color="#070605" />
+      <stop offset="100%" stop-color="#020201" />
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#ogv)" />
+  <text
+    x="600"
+    y="258"
+    text-anchor="middle"
+    fill="#e8e6e3"
+    font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    font-size="54"
+    font-weight="600"
+    letter-spacing="0.04em"
+  >
+    Vidinis medis
+  </text>
+  <text
+    x="600"
+    y="318"
+    text-anchor="middle"
+    fill="#9a9690"
+    font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    font-size="23"
+    font-weight="400"
+    letter-spacing="0.1em"
+  >
+    interaktyvus � emocijos � gylis
+  </text>
+  <g transform="translate(600 448)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path
+      d="M0 52V14M-38 16L0 38M38 16L0 38"
+      stroke="#BAAA8E"
+      stroke-width="5"
+    />
+  </g>
+</svg>
