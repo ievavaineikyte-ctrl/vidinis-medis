@@ -75,6 +75,6 @@ python -m http.server 8080
 
 ## Contact
 
-**Ieva Vaineikytė** — Junior Front-End Developer  
+**Ieva Vaineikytė** — Junior Web Developer  
 📧 ieva.vaineikyte@gmail.com  
 🔗 [GitHub](https://github.com/ievavaineikyte-ctrl)
